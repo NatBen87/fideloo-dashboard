@@ -1,127 +1,137 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { showToast } from '../lib/api';
 
 export default function RegisterPage() {
   const [form, setForm] = useState({
     email: '',
     password: '',
     business_name: '',
-    business_type: ''
+    business_type: '',
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const router = useRouter();
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleRegister = async () => {
+    if (!form.email.trim() || !form.password || !form.business_name.trim()) {
+      showToast('Merci de remplir tous les champs obligatoires', 'error');
+      return;
+    }
     setLoading(true);
-    setError('');
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/merchants/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
+        body: JSON.stringify(form),
       });
       const data = await res.json();
-      if (data.error) {
-        setError(data.error);
+      if (!res.ok) {
+        showToast(data.error || 'Erreur lors de la création du compte', 'error');
       } else {
         localStorage.setItem('merchant', JSON.stringify(data.merchant));
         localStorage.setItem('token', data.token);
-        router.push('/dashboard');
+        router.push('/dashboard/onboarding');
       }
-    } catch (e) {
-      setError('Erreur de connexion au serveur');
+    } catch {
+      showToast('Erreur de connexion au serveur', 'error');
     }
     setLoading(false);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">Créer un compte</h1>
-        <p className="text-gray-500 mb-6">Rejoignez Fideloo gratuitement</p>
-
-        {error && (
-          <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">
-            {error}
+    <div className="min-h-screen bg-amber-50 flex items-center justify-center px-4 py-8">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-amber-400 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+            <span className="text-2xl font-black text-white">F</span>
           </div>
-        )}
-
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Nom du commerce
-          </label>
-          <input
-            name="business_name"
-            value={form.business_name}
-            onChange={handleChange}
-            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Ex: Boulangerie Martin"
-          />
+          <h1 className="text-3xl font-black text-gray-900">Créer un compte</h1>
+          <p className="text-gray-500 mt-1">Rejoignez Fideloo gratuitement</p>
         </div>
 
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Type de commerce
-          </label>
-          <select
-            name="business_type"
-            value={form.business_type}
-            onChange={handleChange}
-            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        <div className="bg-white rounded-3xl shadow-sm border border-amber-100 p-8 space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+              Nom du commerce <span className="text-red-400">*</span>
+            </label>
+            <input
+              name="business_name"
+              value={form.business_name}
+              onChange={handleChange}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-transparent transition"
+              placeholder="Ex: Boulangerie Martin"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Type de commerce</label>
+            <select
+              name="business_type"
+              value={form.business_type}
+              onChange={handleChange}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-transparent transition bg-white"
+            >
+              <option value="">Sélectionner...</option>
+              <option value="restaurant">Restaurant</option>
+              <option value="boulangerie">Boulangerie / Pâtisserie</option>
+              <option value="cafe">Café / Bar</option>
+              <option value="coiffeur">Coiffeur / Beauté</option>
+              <option value="boutique">Boutique</option>
+              <option value="sport">Sport / Fitness</option>
+              <option value="autre">Autre</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+              Email <span className="text-red-400">*</span>
+            </label>
+            <input
+              name="email"
+              type="email"
+              value={form.email}
+              onChange={handleChange}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-transparent transition"
+              placeholder="vous@exemple.com"
+              autoComplete="email"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+              Mot de passe <span className="text-red-400">*</span>
+            </label>
+            <input
+              name="password"
+              type="password"
+              value={form.password}
+              onChange={handleChange}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-transparent transition"
+              placeholder="Minimum 6 caractères"
+              autoComplete="new-password"
+            />
+          </div>
+
+          <button
+            onClick={handleRegister}
+            disabled={loading || !form.email.trim() || !form.password || !form.business_name.trim()}
+            className="w-full bg-amber-400 hover:bg-amber-500 disabled:bg-gray-200 disabled:text-gray-400 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 mt-2"
           >
-            <option value="">Sélectionner...</option>
-            <option value="restaurant">Restaurant</option>
-            <option value="boulangerie">Boulangerie</option>
-            <option value="coiffeur">Coiffeur</option>
-            <option value="boutique">Boutique</option>
-            <option value="autre">Autre</option>
-          </select>
+            {loading ? (
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              'Créer mon compte gratuitement'
+            )}
+          </button>
+
+          <p className="text-center text-sm text-gray-400 pt-2">
+            Déjà un compte ?{' '}
+            <a href="/" className="text-amber-600 font-semibold hover:underline">Se connecter</a>
+          </p>
         </div>
-
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-          <input
-            name="email"
-            type="email"
-            value={form.email}
-            onChange={handleChange}
-            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="vous@exemple.com"
-          />
-        </div>
-
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Mot de passe
-          </label>
-          <input
-            name="password"
-            type="password"
-            value={form.password}
-            onChange={handleChange}
-            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="••••••••"
-          />
-        </div>
-
-        <button
-          onClick={handleRegister}
-          disabled={loading}
-          className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50"
-        >
-          {loading ? 'Création...' : 'Créer mon compte'}
-        </button>
-
-        <p className="text-center text-sm text-gray-500 mt-4">
-          Déjà un compte ?{' '}
-          <a href="/" className="text-blue-600 hover:underline">Se connecter</a>
-        </p>
       </div>
     </div>
   );

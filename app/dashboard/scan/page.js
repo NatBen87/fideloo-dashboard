@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { authFetch, API } from '../../lib/api';
+import { authFetch, API, showToast } from '../../lib/api';
 
 export default function ScanPage() {
   const router = useRouter();
@@ -12,10 +12,9 @@ export default function ScanPage() {
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState('');
   const [pointsToAdd, setPointsToAdd] = useState(1);
+  const [doublePoints, setDoublePoints] = useState(false);
   const [addingPoints, setAddingPoints] = useState(false);
   const [redeeming, setRedeeming] = useState(false);
-  const [successMsg, setSuccessMsg] = useState('');
-  const [actionError, setActionError] = useState('');
   const [history, setHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
@@ -32,8 +31,6 @@ export default function ScanPage() {
     setSearching(true);
     setSearchError('');
     setCustomer(null);
-    setSuccessMsg('');
-    setActionError('');
     setHistory([]);
     setShowHistory(false);
     try {
@@ -53,24 +50,23 @@ export default function ScanPage() {
 
   async function handleAddPoints() {
     if (!customer || !merchant) return;
+    const effectivePoints = doublePoints ? pointsToAdd * 2 : pointsToAdd;
     setAddingPoints(true);
-    setSuccessMsg('');
-    setActionError('');
     try {
       const res = await authFetch(`${API}/transactions`, {
         method: 'POST',
-        body: JSON.stringify({ merchant_id: merchant.id, customer_id: customer.id, points: pointsToAdd }),
+        body: JSON.stringify({ merchant_id: merchant.id, customer_id: customer.id, points: effectivePoints }),
       });
       const data = await res.json();
       if (res.ok) {
         setCustomer(data.customer);
-        setSuccessMsg(`+${pointsToAdd} point${pointsToAdd > 1 ? 's' : ''} ajouté${pointsToAdd > 1 ? 's' : ''} !`);
-        if (showHistory) await loadHistory(data.customer.id);
+        showToast(`+${effectivePoints} point${effectivePoints > 1 ? 's' : ''} ajouté${effectivePoints > 1 ? 's' : ''} !${doublePoints ? ' (2x)' : ''}`);
+        if (showHistory) loadHistory(data.customer.id);
       } else {
-        setActionError(data.message || "Erreur lors de l'ajout.");
+        showToast(data.message || "Erreur lors de l'ajout.", 'error');
       }
     } catch {
-      setActionError('Erreur de connexion.');
+      showToast('Erreur de connexion.', 'error');
     } finally {
       setAddingPoints(false);
     }
@@ -79,20 +75,18 @@ export default function ScanPage() {
   async function handleRedeem() {
     if (!customer) return;
     setRedeeming(true);
-    setSuccessMsg('');
-    setActionError('');
     try {
       const res = await authFetch(`${API}/customers/${customer.id}/redeem`, { method: 'POST' });
       const data = await res.json();
       if (res.ok) {
         setCustomer(data.customer);
-        setSuccessMsg('Récompense utilisée ! Points déduits.');
-        if (showHistory) await loadHistory(data.customer.id);
+        showToast('Récompense utilisée ! Points déduits.');
+        if (showHistory) loadHistory(data.customer.id);
       } else {
-        setActionError(data.message || 'Erreur lors de la rédemption.');
+        showToast(data.message || 'Erreur lors de la rédemption.', 'error');
       }
     } catch {
-      setActionError('Erreur de connexion.');
+      showToast('Erreur de connexion.', 'error');
     } finally {
       setRedeeming(false);
     }
@@ -115,16 +109,14 @@ export default function ScanPage() {
   const threshold = merchant?.reward_threshold || 10;
   const progress = customer ? Math.min((customer.points / threshold) * 100, 100) : 0;
   const canRedeem = customer && customer.points >= threshold;
+  const effectivePoints = doublePoints ? pointsToAdd * 2 : pointsToAdd;
 
   return (
     <div className="min-h-screen bg-amber-50">
-      <header className="bg-white shadow-sm border-b border-amber-100">
+      <header className="bg-white shadow-sm border-b border-amber-100 sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-amber-50 transition-colors"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <button onClick={() => router.push('/dashboard')} className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-amber-50 transition-colors">
+            <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
@@ -136,12 +128,33 @@ export default function ScanPage() {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+        {/* 2x points toggle */}
+        <div
+          onClick={() => setDoublePoints(d => !d)}
+          className={`cursor-pointer rounded-2xl border-2 px-5 py-4 flex items-center justify-between transition-all ${
+            doublePoints
+              ? 'bg-amber-400 border-amber-400 text-white shadow-lg shadow-amber-200'
+              : 'bg-white border-amber-100 text-gray-700'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">⚡</span>
+            <div>
+              <p className="font-bold">Double points activé</p>
+              <p className={`text-sm ${doublePoints ? 'text-white/80' : 'text-gray-400'}`}>
+                {doublePoints ? `Chaque ajout de points sera ×2 !` : 'Cliquez pour activer le mode 2x points'}
+              </p>
+            </div>
+          </div>
+          <div className={`w-12 h-6 rounded-full transition-colors ${doublePoints ? 'bg-white/30' : 'bg-gray-200'} relative`}>
+            <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${doublePoints ? 'translate-x-6' : 'translate-x-0.5'}`} />
+          </div>
+        </div>
+
         <form onSubmit={handleSearch} className="bg-white rounded-2xl border border-amber-100 shadow-sm p-6 space-y-4">
           <h2 className="font-bold text-gray-800">Rechercher un client</h2>
           <div>
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">
-              Nom, email ou identifiant
-            </label>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">Nom, email ou identifiant</label>
             <input
               type="text"
               value={query}
@@ -159,7 +172,7 @@ export default function ScanPage() {
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : (
               <>
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
                 Rechercher
@@ -171,7 +184,6 @@ export default function ScanPage() {
 
         {customer && (
           <div className="bg-white rounded-2xl border border-amber-100 shadow-sm p-6 space-y-5">
-            {/* Customer header */}
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center text-amber-700 font-bold text-xl flex-shrink-0">
                 {customer.name?.charAt(0).toUpperCase() || '?'}
@@ -182,33 +194,16 @@ export default function ScanPage() {
               </div>
             </div>
 
-            {/* Progress bar */}
             <div>
               <div className="flex justify-between text-sm mb-2">
                 <span className="text-gray-500">Points accumulés</span>
                 <span className="font-bold text-amber-600">{customer.points} / {threshold} pts</span>
               </div>
               <div className="w-full bg-amber-100 rounded-full h-3">
-                <div
-                  className="bg-amber-400 h-3 rounded-full transition-all duration-500"
-                  style={{ width: `${progress}%` }}
-                />
+                <div className="bg-amber-400 h-3 rounded-full progress-bar" style={{ width: `${progress}%` }} />
               </div>
             </div>
 
-            {/* Feedback messages */}
-            {successMsg && (
-              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm text-center font-medium">
-                {successMsg}
-              </div>
-            )}
-            {actionError && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm text-center">
-                {actionError}
-              </div>
-            )}
-
-            {/* Redeem reward */}
             {canRedeem && (
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
                 <p className="text-amber-800 font-semibold text-sm mb-1">Récompense disponible !</p>
@@ -221,22 +216,19 @@ export default function ScanPage() {
                   {redeeming ? (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    <>
-                      <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
-                      </svg>
-                      Utiliser la récompense
-                    </>
+                    'Utiliser la récompense'
                   )}
                 </button>
               </div>
             )}
 
-            {/* Add points */}
             <div className="space-y-3">
-              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block">
-                Points à ajouter
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Points à ajouter</label>
+                {doublePoints && (
+                  <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">⚡ Mode 2x actif</span>
+                )}
+              </div>
               <div className="flex gap-2">
                 {[1, 2, 3, 5].map((n) => (
                   <button
@@ -249,7 +241,7 @@ export default function ScanPage() {
                         : 'border-gray-200 text-gray-600 hover:border-amber-300'
                     }`}
                   >
-                    +{n}
+                    +{n}{doublePoints ? `→${n * 2}` : ''}
                   </button>
                 ))}
               </div>
@@ -261,22 +253,17 @@ export default function ScanPage() {
                 {addingPoints ? (
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
-                  `Ajouter ${pointsToAdd} point${pointsToAdd > 1 ? 's' : ''}`
+                  `Ajouter ${effectivePoints} point${effectivePoints > 1 ? 's' : ''}${doublePoints ? ' ⚡' : ''}`
                 )}
               </button>
             </div>
 
-            {/* Transaction history */}
             <button
               onClick={toggleHistory}
               className="w-full flex items-center justify-between text-sm text-gray-500 hover:text-amber-600 transition-colors py-1 border-t border-gray-100 pt-4"
             >
               <span className="font-medium">Historique des visites</span>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className={`w-4 h-4 transition-transform ${showHistory ? 'rotate-180' : ''}`}
-                fill="none" viewBox="0 0 24 24" stroke="currentColor"
-              >
+              <svg className={`w-4 h-4 transition-transform ${showHistory ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </button>
@@ -294,13 +281,9 @@ export default function ScanPage() {
                     {history.map((t) => (
                       <li key={t.id} className="flex items-center justify-between text-sm">
                         <div>
-                          <p className="font-medium text-gray-700">
-                            {t.points > 0 ? 'Visite' : 'Récompense utilisée'}
-                          </p>
+                          <p className="font-medium text-gray-700">{t.points > 0 ? 'Visite' : 'Récompense utilisée'}</p>
                           <p className="text-xs text-gray-400">
-                            {new Date(t.created_at).toLocaleDateString('fr-FR', {
-                              day: 'numeric', month: 'short', year: 'numeric',
-                            })}
+                            {new Date(t.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
                           </p>
                         </div>
                         <span className={`font-bold ${t.points > 0 ? 'text-green-600' : 'text-red-500'}`}>
