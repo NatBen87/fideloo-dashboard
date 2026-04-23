@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { showToast } from './lib/api';
+import { API, showToast } from './lib/api';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -13,7 +13,7 @@ export default function LoginPage() {
     if (!email.trim() || !password) return;
     setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/merchants/login`, {
+      const res = await fetch(`${API}/merchants/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim(), password }),

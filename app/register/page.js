@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { showToast } from '../lib/api';
+import { API, showToast } from '../lib/api';
 
 export default function RegisterPage() {
   const [form, setForm] = useState({
@@ -22,7 +22,7 @@ export default function RegisterPage() {
     }
     setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/merchants/register`, {
+      const res = await fetch(`${API}/merchants/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
