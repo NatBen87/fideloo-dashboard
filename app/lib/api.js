@@ -11,13 +11,3 @@ export async function authFetch(url, options = {}) {
     },
   });
 }
-
-export function getMerchantJoinUrl(merchantId) {
-  if (typeof window === 'undefined') return '';
-  return `${window.location.origin}/join/${merchantId}`;
-}
-
-export function showToast(message, type = 'success') {
-  if (typeof window === 'undefined') return;
-  window.dispatchEvent(new CustomEvent('fideloo:toast', { detail: { message, type } }));
-}
