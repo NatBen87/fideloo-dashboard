@@ -1,13 +1,8 @@
-export const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-
-export function getMerchantJoinUrl(merchantId) {
-  if (typeof window === 'undefined') return '';
-  return `${window.location.origin}/join/${merchantId}`;
-}
+export const API = 'https://fideloo-backend-production.up.railway.app';
 
 export async function authFetch(url, options = {}) {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-  const res = await fetch(url, {
+  const token = localStorage.getItem('token');
+  return fetch(url, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -15,14 +10,11 @@ export async function authFetch(url, options = {}) {
       ...options.headers,
     },
   });
-  if (res.status === 401) {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('merchant');
-      localStorage.removeItem('token');
-      window.location.href = '/';
-    }
-  }
-  return res;
+}
+
+export function getMerchantJoinUrl(merchantId) {
+  if (typeof window === 'undefined') return '';
+  return `${window.location.origin}/join/${merchantId}`;
 }
 
 export function showToast(message, type = 'success') {
