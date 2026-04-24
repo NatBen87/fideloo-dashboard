@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { API } from '../../lib/api';
+import AppleWalletButton from '../../components/AppleWalletButton';
 
 export default function JoinPage() {
   const { merchantId } = useParams();
@@ -174,6 +175,8 @@ export default function JoinPage() {
               </div>
             </div>
           )}
+
+          <AppleWalletButton href={`${API}/passes/apple/${customer?.id}`} />
 
           <p className="text-center text-xs text-gray-400 pb-2">Aucune app à télécharger · Gratuit · Sans spam</p>
         </div>
