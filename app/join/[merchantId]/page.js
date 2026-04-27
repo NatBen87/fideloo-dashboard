@@ -53,6 +53,7 @@ export default function JoinPage() {
       });
       const data = await res.json();
       if (res.ok) {
+        console.log('[handleJoin] registration success, data:', JSON.stringify(data));
         setCustomer(data);
         setReferred(data.referred || false);
         setStep('success');
@@ -293,10 +294,6 @@ export default function JoinPage() {
             )}
           </button>
         </div>
-            
-{customer?.id && (
-  <AppleWalletButton href={`${API}/passes/apple/${customer?.id}`} />
-)}        <p className="text-center text-xs text-gray-400 mt-4">Aucune app à télécharger · Gratuit · Sans spam</p>
       </div>
     </div>
   );
