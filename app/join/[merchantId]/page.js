@@ -293,8 +293,10 @@ export default function JoinPage() {
             )}
           </button>
         </div>
-
-        <p className="text-center text-xs text-gray-400 mt-4">Aucune app à télécharger · Gratuit · Sans spam</p>
+            
+{customer?.id && (
+  <AppleWalletButton href={`${API}/passes/apple/${customer?.id}`} />
+)}        <p className="text-center text-xs text-gray-400 mt-4">Aucune app à télécharger · Gratuit · Sans spam</p>
       </div>
     </div>
   );
